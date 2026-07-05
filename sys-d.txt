@@ -1,0 +1,14 @@
+
+Tables - URL, User
+
+URL -> id, long_url, short_code, click_count, created_at, last_clicked_at, expiry_date, user_id(foreign key)
+User -> id, name, email, hashed_password
+
+one user can have many urls -> one to many
+
+short_codes get hit the most.
+
+#notes
+child table holds the pointer to the parent, not the other way around. 
+no list of urls in user table, itss not stored in the database. the relationship is handled by user_id in URL table.
+short code is sstored not url, causse domain name can change. 
