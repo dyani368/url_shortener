@@ -8,6 +8,7 @@ from app.models import ShortUrl, User
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.utils import shortener
+from app.cache import redis
 
 from sqlalchemy.exc import IntegrityError
 
@@ -53,6 +54,7 @@ def delete_url(url_id: int, current_user: Annotated[User, Depends(get_current_us
     if not url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Url not found")
     
+    redis.delete_cached_url(url.short_code)    
     db.delete(url)
     db.commit()
 

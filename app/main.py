@@ -8,6 +8,7 @@ from typing import Annotated
 from app.core.database import get_db
 from app.models import ShortUrl
 from app.routers import auth, url
+from app.cache import redis
 
 
 app = FastAPI()
@@ -21,18 +22,25 @@ def home():
 
 @app.get("/{short_code}")
 def redirect(short_code: str, db: Annotated[Session, Depends(get_db)]):
+    cached_long_url = redis.get_cache_long_url(short_code)
+    if cached_long_url:
+        return RedirectResponse(url=cached_long_url)
 
-    url = db.execute(select(ShortUrl).where(ShortUrl.short_code == short_code)).scalars().first()
+    else:
+        url = db.execute(select(ShortUrl).where(ShortUrl.short_code == short_code)).scalars().first()
 
-    if not url:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="url not found")
+        if not url:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="url not found")
 
-    expiry_date = url.expiry_date
-    if expiry_date.tzinfo is None:
-        expiry_date = expiry_date.replace(tzinfo=UTC)
+        expiry_date = url.expiry_date
+        if expiry_date.tzinfo is None:
+            expiry_date = expiry_date.replace(tzinfo=UTC)
 
-    now = datetime.now(UTC)
-    if expiry_date < now:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="url expired")
+        now = datetime.now(UTC)
+        if expiry_date < now:
+            raise HTTPException(status_code=status.HTTP_410_GONE, detail="url expired")
+        
+        ttl_seconds = int((expiry_date - now).total_seconds())
+        redis.set_cache_long_url(short_code, url.long_url, ttl_seconds)
 
-    return RedirectResponse(url=url.long_url)
+        return RedirectResponse(url=url.long_url)
