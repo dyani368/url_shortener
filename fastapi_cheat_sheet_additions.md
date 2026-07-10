@@ -88,6 +88,13 @@
 
 - Defining a mapped class in a file is not enough; Python must import that module so
   SQLAlchemy can register the class and its table metadata.
+- `Mapped["OtherModel"]` and `Mapped[list["OtherModel"]]` are forward references:
+  the quotes delay evaluation of the type name. This helps avoid circular imports
+  at runtime, but the target class still must be imported somewhere before
+  SQLAlchemy configures relationships.
+- If an editor says a quoted relationship type is "not defined", add a type-checking
+  only import with `if TYPE_CHECKING:`. That gives the editor/type checker the class
+  name without creating a runtime circular import.
 - String relationship targets such as `relationship()` inferred from
   `Mapped[list["URL"]]` are resolved when SQLAlchemy configures its mappers. Both
   related model modules must have been imported by then.
@@ -158,3 +165,34 @@
   requests.
 - The server authenticates each request independently from its credentials; it does
   not remember that the same browser previously called the login endpoint.
+
+## URL creation schemas and storage
+
+- A create URL request should contain only the client-owned input, usually
+  `long_url`. Fields such as `short_code`, `user_id`, `click_count`, timestamps, and
+  expiry are server-owned.
+- Never accept `user_id` from the request body for an owned resource. Use the
+  authenticated user from `Depends(get_current_user)` so a client cannot create data
+  under another user's account.
+- Pydantic's `HttpUrl` validates URL shape, but the database column stores a plain
+  string. Convert with `str(url.long_url)` before assigning it to a SQLAlchemy
+  string column.
+- Python imports modules from `.py` files. If a schema file is named `url_schema`
+  without the `.py` extension, `from app.schemas.url_schema import ...` will fail.
+- The short code does not replace the long URL. It is stored beside the long URL as
+  a lookup key. A redirect endpoint later receives the short code, finds the
+  matching row, and redirects the browser to the stored long URL.
+- A create endpoint can return only `short_code`, letting the frontend/client build
+  the full short URL, or it can return a computed `short_url` such as
+  `https://domain.com/abc123`. The database usually stores the code, not the full
+  domain URL.
+- Redirect endpoints are normally public: creating and managing URLs requires
+  authentication, but visiting a shared short link should not require login.
+- For expiration checks, compare the stored `expiry_date` with the server's current
+  time. If a future-dated row returns `410 Gone`, verify the exact short code being
+  visited, the running server process, and the server clock before changing the
+  database model.
+- Swagger UI calls endpoints using browser `fetch`. A redirect endpoint may work in
+  the address bar but show "Failed to fetch" in Swagger if the redirect target is a
+  different origin that does not allow Swagger's CORS request. Test redirect
+  behavior by visiting the short URL directly in the browser address bar.
