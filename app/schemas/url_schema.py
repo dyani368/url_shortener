@@ -16,5 +16,13 @@ class UrlResponse(UrlBase):
     expiry_date: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class UrlAnalyticsResponse(BaseModel):
+    id: int
+    short_code: str
+    click_count: int
+    last_clicked_at: datetime|None
+
+    model_config = ConfigDict(from_attributes=True)
     
 
