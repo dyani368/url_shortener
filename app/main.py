@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.responses import RedirectResponse
 from datetime import datetime, UTC
 from sqlalchemy.orm import Session
@@ -10,13 +10,14 @@ from app.models import ShortUrl
 from app.routers import auth, url, analytics
 from app.cache import redis
 from app.services import analytics_service
-
+from app.middleware import rate_limiter
 
 app = FastAPI()
 app.include_router(auth.router,prefix="/api/users", tags=["users"])
 app.include_router(url.router,prefix="/api/urls", tags=["urls"])
 app.include_router(analytics.router,prefix="/api/analytics", tags=["analytics"])
 
+app.middleware("http")(rate_limiter.check_request)
 
 @app.get("/")
 def home():
