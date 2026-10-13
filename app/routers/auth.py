@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Annotated
 
@@ -10,22 +10,21 @@ from app.schemas import user_schema
 from app.core.database import get_db
 from app.core import security 
 
-
-
-
 from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
 @router.post("/register", response_model=user_schema.UserResponse, status_code=status.HTTP_201_CREATED)
-def register(new_user: user_schema.UserCreate, db: Annotated[Session, Depends(get_db)]):
+async def register(new_user: user_schema.UserCreate, db: Annotated[AsyncSession, Depends(get_db)]):
 
-    result1 = db.execute(select(User).where(User.username == new_user.username)).scalars().first()
+    res1 = await db.execute(select(User).where(User.username == new_user.username))
+    result1 = res1.scalars().first()
 
     if result1:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already registered")
     
-    result2 = db.execute(select(User).where(User.email == new_user.email)).scalars().first()
+    res2 = await db.execute(select(User).where(User.email == new_user.email))
+    result2 = res2.scalars().first()
 
     if result2:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="email already registered")
@@ -34,21 +33,22 @@ def register(new_user: user_schema.UserCreate, db: Annotated[Session, Depends(ge
     db.add(user)
 
     try:
-        db.commit()
+        await db.commit()
     except IntegrityError:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username or email already registered",
         )
 
-    db.refresh(user)
+    await db.refresh(user)
     return user
 
 @router.post("/token", response_model=user_schema.Token)
-def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[Session, Depends(get_db)]):
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[AsyncSession, Depends(get_db)]):
 
-    result1 = db.execute(select(User).where(User.username==form_data.username)).scalars().first()
+    res = await db.execute(select(User).where(User.username==form_data.username))
+    result1 = res.scalars().first()
     
     if not result1 or not security.verify_password(form_data.password,result1.hashed_password):
         raise HTTPException(
@@ -66,7 +66,7 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annota
     return {"access_token": token, "token_type": "bearer"}
 
 @router.get("/me", response_model=user_schema.UserResponse)
-def get_me(current_user: Annotated[User, Depends(security.get_current_user)]):
+async def get_me(current_user: Annotated[User, Depends(security.get_current_user)]):
     return current_user
 
     

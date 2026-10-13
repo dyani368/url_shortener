@@ -1,139 +1,55 @@
-# URL Shortener
-A URL shortener built with FastAPI, featuring authenticated URL management, Redis-backed redirects, click analytics, and rate limiting.
+# URL Shortener API
+
+An async URL shortener built with FastAPI, PostgreSQL, and Redis. It supports authenticated link management, expiring redirects, cached redirect lookups, click analytics, and an atomic Redis token-bucket rate limiter.
 
 ## Features
-- Core: Users can create, list, and delete short URLs.
-- Short URL creation logic: Base62 shortener utility with collision retry.
-- Fast redirects: Redis cache-aside pattern for redirect metadata, with link expiration.
-- Analytics: Click count and last-click timestamp are updated using FastAPI BackgroundTasks.
-- Rate limiting: Policy-based token bucket rate limiting using Redis and a Lua script, implemented as middleware.
-- Data validation: Inputs are validated using Pydantic schemas.
-- Security: JWT authentication for protected routes.
-- Database: Relational PostgreSQL database modeled with SQLAlchemy.
 
-## Tech Stack
-- Python
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- Redis
-- Docker
+- JWT authentication and Argon2 password hashing.
+- Base62 short codes with bounded collision retries and a database uniqueness constraint.
+- PostgreSQL as the source of truth; Redis cache-aside redirects with expiry-aware TTLs.
+- Atomic click-count updates in PostgreSQL after redirects.
+- Redis Lua token-bucket limits for authentication, API, and redirect routes.
+- Liveness and dependency-backed readiness endpoints at `/health/live` and `/health/ready`.
+- Docker Compose stack for local PostgreSQL, Redis, and the API.
 
-## Architecture
-```text
-Client
-  |
-  | HTTP
-  v
-FastAPI app
-  |
-  |-- JWT auth protects URL management and analytics routes
-  |
-  |-- Redis / Upstash
-  |     |-- Cache-aside redirects: short_code -> URL metadata
-  |     |-- Token-bucket rate limiting with Lua script
-  |
-  |-- BackgroundTasks
-  |     |-- Updates click_count and last_clicked_at after redirect
-  |
-  v
-SQLAlchemy ORM
-  |
-  v
-PostgreSQL / Neon
+## Run locally
+
+Install Docker Desktop and start the Docker daemon. From the repository root:
+
+```powershell
+$env:SECRET_KEY = "replace-with-a-random-secret-of-at-least-32-characters"
+docker compose up --build
 ```
 
-### Redirect Flow
-```text
-GET /{short_code}
-  |
-  |-- Check Redis cache
-  |     |-- Hit: redirect immediately and update analytics in background
-  |     |-- Miss: query PostgreSQL
-  |
-  |-- Validate link expiry
-  |-- Store redirect metadata in Redis with TTL
-  |-- Return RedirectResponse
+Compose runs migrations before starting the API. Open the API documentation at <http://localhost:8000/docs>. The compose database uses a development-only password; do not reuse it for a deployed service.
+
+For a local Python environment, set `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`, install `requirements.txt`, run `alembic upgrade head`, and start the service with `uvicorn app.main:app --reload`.
+
+## Verify
+
+Run unit and API tests:
+
+```powershell
+$env:DATABASE_URL = "postgresql://test:test@127.0.0.1:5432/test"
+$env:REDIS_URL = "redis://127.0.0.1:6379/0"
+$env:SECRET_KEY = "local-test-secret-that-is-at-least-32-characters"
+python -m pytest -q
 ```
 
-### Rate Limiting Flow
-```text
-Request
-  |
-  v
-Rate limit middleware
-  |
-  |-- Classify route policy: auth, API, or redirect
-  |-- Run Redis Lua token-bucket script atomically
-  |-- Allow request or return 429 Too Many Requests
-  |
-  v
-FastAPI route handler
+The API tests replace database and Redis calls with controlled test doubles. To exercise real dependencies and migrations, run `docker compose up --build` and use the interactive API docs or add a service-backed test profile.
+
+## Load test
+
+With the app running, install [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) and run:
+
+```powershell
+k6 run k6/load_test.js
 ```
 
-## Installation
-1. Create and activate a virtual environment:
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
+The script reports successful redirect latency and throughput separately from `429` responses. The redirect token bucket is shared by client IP, so this load profile intentionally encounters the configured limiter. For an app-capacity benchmark, set `RATE_LIMIT_ENABLED=false` only in an isolated local benchmark environment, restart the app, run k6, then restore rate limiting. Record the app version, CPU and memory, worker count, dependency versions, cache warmup state, VU/stage profile, successful redirects per second, p95 latency, and failure rate with every result. Do not report requests per second that include rejected requests as successful redirect throughput.
 
-2. Create a `.env` file and add your environment variables:
-```env
-DATABASE_URL=...
-SECRET_KEY=...
-REDIS_URL=...
-```
+## Resume description
 
-3. Install the required dependencies:
-```bash
-pip install -r requirements.txt
-```
+> Built an async URL-shortening API with FastAPI, PostgreSQL, and Redis, adding JWT-protected link management, expiry-aware cached redirects, atomic click analytics, and a Lua-based token-bucket rate limiter.
 
-4. Run database migrations:
-```bash
-alembic upgrade head
-```
-
-5. Start the FastAPI development server:
-```bash
-fastapi dev app/main.py
-```
-
-## Dockerized Local Deployment
-This application is containerized with Docker and can run locally against managed PostgreSQL (Neon) and Redis (Upstash) services.
-
-- Docker packages the application, Python runtime, and dependencies into a portable container.
-- PostgreSQL (Neon) is used as the source of truth.
-- Redis (Upstash) is used for redirect caching and token-bucket rate limiting.
-
-Build the Docker image:
-```bash
-docker build -t url-shortener .
-```
-
-Run the container locally:
-```bash
-docker run -p 8000:8000 --env-file .env url-shortener
-```
-
-Open the API docs:
-```text
-http://127.0.0.1:8000/docs
-```
-
-## Cloud Run Deployment Target
-The app is designed to be deployable to Google Cloud Run using the Dockerfile, but this deployment is optional and requires an active Google Cloud billing account.
-
-```bash
-gcloud auth login
-gcloud config set project <your-project-id>
-gcloud run deploy url-shortener --source . --region us-east1 --allow-unauthenticated
-```
-
-## Future Scaling
-- CDN or edge caching in front of redirects for globally popular links.
-- Redis Cluster for scaling cache and rate-limit state.
-- PostgreSQL read replicas for heavy read traffic.
-- Kafka or Redis Streams for high-volume click analytics.
-- Gateway-level rate limiting through Cloudflare, Nginx, or an API gateway.
+Add benchmark figures only after collecting and saving repeatable k6 results with the environment and success rate stated.

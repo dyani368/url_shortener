@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str
 
     redis_url: str
+    rate_limit_enabled: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

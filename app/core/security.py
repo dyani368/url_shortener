@@ -4,7 +4,7 @@ import jwt
 from app.core.config import settings
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Annotated
 from app.core.database import get_db
@@ -75,9 +75,9 @@ def verify_token(token: str) -> int|None:
     except (jwt.InvalidTokenError, ValueError):
         return None
 
-def get_current_user(
+async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[Session, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)]
 ) -> User:
     
     credentials_exception = HTTPException(
@@ -90,7 +90,8 @@ def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = db.execute(select(User).where(User.id == user_id)).scalars().first()
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
 
     if not user:
         raise credentials_exception

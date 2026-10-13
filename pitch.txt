@@ -1,0 +1,7 @@
+I built an asynchronous URL-shortening API with FastAPI, PostgreSQL, and Redis.
+
+Users can register, authenticate, create and manage links, and receive redirects that honor link expiration. Redirect metadata is cached in Redis, and the API uses an atomic Redis Lua token bucket to limit requests.
+
+One correctness issue I addressed was click counting: read-modify-write updates can lose increments when requests overlap. Clicks now use a single atomic SQL update. I also added cache failure handling, endpoint tests, health checks, a Docker Compose environment, and a k6 script that separates successful redirects from rate-limited requests.
+
+I only include throughput and latency figures after running the benchmark against a recorded environment and checking the successful redirect rate.

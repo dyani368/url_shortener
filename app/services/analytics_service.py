@@ -1,23 +1,23 @@
-from sqlalchemy import select
-from datetime import datetime, UTC
+from sqlalchemy import update, func
+import logging
 from app.core.database import SessionLocal
 from app.models import ShortUrl
 
-def calculate_analytics(url_id: int):
+logger = logging.getLogger(__name__)
 
-    db = SessionLocal()
-    try:
-        url = db.execute(select(ShortUrl).where(ShortUrl.id == url_id)).scalars().first()
+async def calculate_analytics(url_id: int):
 
-        if not url:
-            return
-
-        url.click_count += 1
-        url.last_clicked_at = datetime.now(UTC)
-
-        db.commit()
-    except Exception:
-        db.rollback()
-        print("Failed to update analytics")
-    finally:
-        db.close()
+    async with SessionLocal() as db:
+        try:
+            await db.execute(
+                update(ShortUrl)
+                .where(ShortUrl.id == url_id)
+                .values(
+                    click_count=ShortUrl.click_count + 1,
+                    last_clicked_at=func.now(),
+                )
+            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            logger.exception("Failed to record click for URL id %s", url_id)
