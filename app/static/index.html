@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f6fa" />
+    <meta name="description" content="Shorten links, share them, and see how they perform." />
+    <title>Shortly — links that move</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Shortly home"><span class="brand-mark">s</span><span>shortly<span class="brand-period">.</span></span></a>
+      <div class="topbar-right">
+        <span class="service-status" id="service-status"><span class="status-dot"></span><span>Checking API…</span></span>
+        <button class="button button-quiet hidden" id="logout-button" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="welcome-view">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> YOUR LINKS, IN GOOD COMPANY</div>
+          <h1>Long links.<br /><span>Short story.</span></h1>
+          <p class="hero-description">Turn the links you love into tidy little URLs. Share them anywhere, then see what happens next.</p>
+          <div class="hero-proof"><div class="avatar-stack"><i>J</i><i>M</i><i>A</i><i>+</i></div><span>One small link, a whole lot less clutter.</span></div>
+          <div class="hero-decoration deco-one"></div><div class="hero-decoration deco-two"></div>
+        </div>
+
+        <section class="auth-card" aria-labelledby="auth-title">
+          <div class="auth-card-top"><span class="card-kicker">YOUR LINK STUDIO</span><span class="lock-icon" aria-hidden="true">↗</span></div>
+          <h2 id="auth-title">Welcome back</h2>
+          <p class="auth-subtitle" id="auth-subtitle">Pick up right where you left off.</p>
+          <div class="auth-tabs" role="tablist" aria-label="Account action">
+            <button class="auth-tab active" type="button" role="tab" aria-selected="true" data-auth-mode="login">Log in</button>
+            <button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-mode="register">Create account</button>
+          </div>
+          <form id="auth-form">
+            <label class="field" id="username-field"><span>Username</span><input name="username" autocomplete="username" placeholder="Your username" maxlength="15" required /></label>
+            <label class="field hidden" id="email-field"><span>Email address</span><input name="email" type="email" autocomplete="email" placeholder="you@example.com" maxlength="50" /></label>
+            <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required /></label>
+            <button class="button button-primary button-wide" id="auth-submit" type="submit">Log in <span aria-hidden="true">→</span></button>
+          </form>
+          <p class="form-message" id="auth-message" role="status" aria-live="polite"></p>
+          <div class="auth-footnote"><span>✦</span> Your links stay yours. Always.</div>
+        </section>
+      </section>
+
+      <section class="dashboard hidden" id="dashboard-view">
+        <div class="dashboard-heading">
+          <div><div class="eyebrow"><span class="eyebrow-line"></span> YOUR WORKSPACE</div><h1>Good links,<br class="mobile-break" /> <span id="greeting-name">good morning.</span></h1><p>Everything you’ve shortened, all in one place.</p></div>
+          <div class="date-chip"><span class="date-icon">◷</span><span id="today-label"></span></div>
+        </div>
+
+        <section class="create-card" aria-labelledby="create-title">
+          <div class="create-intro"><div class="create-icon">↗</div><div><span class="card-kicker">MAKE IT SHORT</span><h2 id="create-title">A little less URL, a lot more shareable.</h2></div></div>
+          <form class="create-form" id="create-form"><label class="url-input-wrap"><span class="url-icon">⌁</span><input name="long_url" type="url" placeholder="Paste your long link here…" required /></label><button class="button button-primary" id="create-submit" type="submit">Shorten link <span aria-hidden="true">→</span></button></form>
+          <p class="form-message create-message" id="create-message" role="status" aria-live="polite"></p>
+          <div class="create-hint"><span class="sparkle">✳</span> Your new link is ready to share in a blink.</div>
+        </section>
+
+        <section class="stats-grid" aria-label="Link summary">
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">YOUR LINKS</span><span class="stat-icon lilac">⌁</span></div><strong id="stat-links">—</strong><span class="stat-caption">little links, big possibilities</span><div class="stat-bar"><i id="links-bar"></i></div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">TOTAL CLICKS</span><span class="stat-icon peach">↗</span></div><strong id="stat-clicks">—</strong><span class="stat-caption">every click has a story</span><div class="stat-bar peach-bar"><i id="clicks-bar"></i></div></article>
+          <article class="stat-card stat-note"><span class="stat-note-icon">✦</span><div><span class="stat-label">A LITTLE REMINDER</span><p>Good things are<br />meant to be <em>shared.</em></p></div><span class="note-doodle">〰</span></article>
+        </section>
+
+        <section class="links-section">
+          <div class="section-heading"><div><span class="card-kicker">THE COLLECTION</span><h2>Your links<span class="heading-period">.</span></h2></div><button class="button button-quiet refresh-button" id="refresh-button" type="button"><span>↻</span> Refresh</button></div>
+          <div class="links-card" id="links-card">
+            <div class="links-table-head"><span>LINK</span><span>CLICKS</span><span>CREATED</span><span> </span></div>
+            <div class="links-list" id="links-list"><div class="empty-state"><div class="empty-illustration">↗</div><h3>Your first short link is waiting.</h3><p>Paste a link above and we’ll tidy it up for you.</p></div></div>
+          </div>
+          <p class="dashboard-footnote"><span class="status-dot"></span> Redirects are cached in Redis. Clicks are counted in the background.</p>
+        </section>
+      </section>
+
+      <section class="how-it-works" id="how-it-works">
+        <div class="how-heading"><div class="eyebrow"><span class="eyebrow-line"></span> A LINK’S LITTLE JOURNEY</div><h2>Three steps.<br /><span>One less long URL.</span></h2><p>Here’s what happens between paste and click.</p></div>
+        <div class="process-grid">
+          <article class="process-step"><span class="step-number">01</span><div class="step-icon icon-lilac">⌁</div><h3>Drop in a link</h3><p>Paste the URL you want to share. We’ll check it and give it a unique short code.</p><span class="step-tag">POST /api/urls</span></article>
+          <div class="step-connector" aria-hidden="true">→</div>
+          <article class="process-step"><span class="step-number">02</span><div class="step-icon icon-peach">↗</div><h3>Share it anywhere</h3><p>Someone opens your short link. Redis serves a cached destination, or the API finds it in Postgres.</p><span class="step-tag">GET /{short_code}</span></article>
+          <div class="step-connector" aria-hidden="true">→</div>
+          <article class="process-step"><span class="step-number">03</span><div class="step-icon icon-mint">◷</div><h3>See what happens</h3><p>They’re redirected, and the click count updates in the background. Your link tells its story.</p><span class="step-tag">GET /api/analytics/{id}</span></article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer"><a class="brand footer-brand" href="/"><span class="brand-mark">s</span><span>shortly<span class="brand-period">.</span></span></a><span>Made for links with places to be.</span><a class="api-link" href="/docs" target="_blank" rel="noreferrer">Explore the API <span aria-hidden="true">↗</span></a></footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

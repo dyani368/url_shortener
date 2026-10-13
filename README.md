@@ -11,6 +11,7 @@ An async URL shortener built with FastAPI, PostgreSQL, and Redis. It supports au
 - Redis Lua token-bucket limits for authentication, API, and redirect routes.
 - Liveness and dependency-backed readiness endpoints at `/health/live` and `/health/ready`.
 - Docker Compose stack for local PostgreSQL, Redis, and the API.
+- Responsive same-origin web dashboard for registration, login, link management, copying, and analytics.
 
 ## Run locally
 
@@ -21,7 +22,7 @@ $env:SECRET_KEY = "replace-with-a-random-secret-of-at-least-32-characters"
 docker compose up --build
 ```
 
-Compose runs migrations before starting the API. Open the API documentation at <http://localhost:8000/docs>. The compose database uses a development-only password; do not reuse it for a deployed service.
+Compose runs migrations before starting the API. Open the dashboard at <http://localhost:8000> or API documentation at <http://localhost:8000/docs>. The compose database uses a development-only password; do not reuse it for a deployed service.
 
 For a local Python environment, set `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`, install `requirements.txt`, run `alembic upgrade head`, and start the service with `uvicorn app.main:app --reload`.
 

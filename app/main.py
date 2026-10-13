@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status, BackgroundTasks
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from datetime import datetime, UTC
 import logging
 import math
@@ -13,8 +13,10 @@ from app.routers import auth, url, analytics
 from app.cache import redis
 from app.services import analytics_service
 from app.middleware import rate_limiter
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+FRONTEND_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -50,9 +52,17 @@ async def readiness():
         raise HTTPException(status_code=503, detail="service unavailable") from exc
     return {"status": "ok"}
 
-@app.get("/")
-def home():
-    return {"message":"Welcome to URL Shortener!"}
+@app.get("/", include_in_schema=False)
+async def home():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/static/{asset_path:path}", include_in_schema=False)
+async def frontend_assets(asset_path: str):
+    asset = (FRONTEND_DIR / asset_path).resolve()
+    if FRONTEND_DIR.resolve() not in asset.parents or not asset.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(asset)
 
 @app.get("/{short_code}")
 async def redirect(short_code: str, background_tasks: BackgroundTasks):
