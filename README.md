@@ -19,10 +19,11 @@ Install Docker Desktop and start the Docker daemon. From the repository root:
 
 ```powershell
 $env:SECRET_KEY = "replace-with-a-random-secret-of-at-least-32-characters"
+$env:POSTGRES_PASSWORD = "replace-with-a-random-alphanumeric-database-password"
 docker compose up --build
 ```
 
-Compose runs migrations before starting the API. Open the dashboard at <http://localhost:8000> or API documentation at <http://localhost:8000/docs>. The compose database uses a development-only password; do not reuse it for a deployed service.
+Compose runs migrations before starting the API. Open the dashboard at <http://localhost:8000> or API documentation at <http://localhost:8000/docs>. PostgreSQL and Redis are accessible only to containers in the Compose network. Keep both passwords out of Git; set them as environment variables on each machine before starting Compose. If a PostgreSQL volume already exists, changing `POSTGRES_PASSWORD` in Compose does not change that database's existing password.
 
 For a local Python environment, set `DATABASE_URL`, `REDIS_URL`, and `SECRET_KEY`, install `requirements.txt`, run `alembic upgrade head`, and start the service with `uvicorn app.main:app --reload`.
 
